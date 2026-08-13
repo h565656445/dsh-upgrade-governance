@@ -138,11 +138,11 @@ Describe 'Hermes adapter upgrade schema and provider control' {
     It 'uses canonical provider ids and exact credential profile references without duplicate ownership' {
         $providers = Get-JsonDocument $providerRegistry
         $secrets = Get-JsonDocument $secretsPolicy
-        @($providers.providers.provider_id) | Should -Be @('deterministic','deepseek','dashscope-wan27')
+        @($providers.providers.provider_id) | Should -Be @('deterministic','deepseek','provider-b')
         ($providers.providers | Where-Object provider_id -eq 'deterministic').test_only | Should -Be $true
         ($providers.providers | Where-Object provider_id -eq 'deterministic').credential_profile_ref | Should -BeNullOrEmpty
         ($providers.providers | Where-Object provider_id -eq 'deepseek').credential_profile_ref | Should -Be 'cred-provider-a'
-        ($providers.providers | Where-Object provider_id -eq 'dashscope-wan27').credential_profile_ref | Should -Be 'cred-provider-b'
+        ($providers.providers | Where-Object provider_id -eq 'provider-b').credential_profile_ref | Should -Be 'cred-provider-b'
         @($secrets.credential_profiles.credential_profile_id) | Should -Be @('cred-provider-a','cred-provider-b')
 
         $secretsText = Get-Content -LiteralPath $secretsPolicy -Raw
@@ -283,14 +283,14 @@ Describe 'Hermes adapter upgrade schema and provider control' {
     It 'keeps terminal observations fail closed until signed callback or active polling evidence exists' {
         Import-Module $asyncModule -Force
         $runtime = Join-Path $TestDrive 'async-trusted'
-        $prepared = Invoke-HermesAsyncJob -Action Prepare -RuntimeRoot $runtime -TaskId 'task-async-trusted' -ContractSha256 ('C' * 64) -AdapterId 'hermes-provider-worker-v0.2' -ProviderId 'dashscope-wan27' -RequestSha256 ('D' * 64) -BudgetCny 2
+        $prepared = Invoke-HermesAsyncJob -Action Prepare -RuntimeRoot $runtime -TaskId 'task-async-trusted' -ContractSha256 ('C' * 64) -AdapterId 'hermes-provider-worker-v0.2' -ProviderId 'provider-b' -RequestSha256 ('D' * 64) -BudgetCny 2
         $null = Invoke-HermesAsyncJob -Action Submit -RuntimeRoot $runtime -JobPath $prepared.job_path -ProviderJobRef 'provider-job-002'
-        $unknown = Invoke-HermesAsyncJob -Action Observe -RuntimeRoot $runtime -JobPath $prepared.job_path -ObservationEventId 'poll-unverified-unknown-001' -ObservedProviderId 'dashscope-wan27' -ObservedIntentSha256 $prepared.intent_sha256 -ObservedContractSha256 ('C' * 64) -ProviderState unknown -ProviderJobRef 'provider-job-002'
+        $unknown = Invoke-HermesAsyncJob -Action Observe -RuntimeRoot $runtime -JobPath $prepared.job_path -ObservationEventId 'poll-unverified-unknown-001' -ObservedProviderId 'provider-b' -ObservedIntentSha256 $prepared.intent_sha256 -ObservedContractSha256 ('C' * 64) -ProviderState unknown -ProviderJobRef 'provider-job-002'
         $unknown.state | Should -Be 'submitted'
         $unknown.event_type | Should -Be 'security_callback_rejected'
         $unknown.hermes_completed | Should -Be $false
 
-        $duplicate = Invoke-HermesAsyncJob -Action Observe -RuntimeRoot $runtime -JobPath $prepared.job_path -ObservationEventId 'poll-unverified-unknown-001' -ObservedProviderId 'dashscope-wan27' -ObservedIntentSha256 $prepared.intent_sha256 -ObservedContractSha256 ('C' * 64) -ProviderState unknown -ProviderJobRef 'provider-job-002'
+        $duplicate = Invoke-HermesAsyncJob -Action Observe -RuntimeRoot $runtime -JobPath $prepared.job_path -ObservationEventId 'poll-unverified-unknown-001' -ObservedProviderId 'provider-b' -ObservedIntentSha256 $prepared.intent_sha256 -ObservedContractSha256 ('C' * 64) -ProviderState unknown -ProviderJobRef 'provider-job-002'
         $duplicate.duplicate_observation | Should -Be $true
         Assert-UpgradeFailure {
             Invoke-HermesAsyncJob -Action Observe -RuntimeRoot $runtime -JobPath $prepared.job_path -ObservationEventId 'poll-unverified-unknown-001' -ObservedProviderId 'deepseek' -ObservedIntentSha256 $prepared.intent_sha256 -ObservedContractSha256 ('C' * 64) -ProviderState unknown -ProviderJobRef 'provider-job-002'
@@ -328,7 +328,7 @@ Describe 'Hermes adapter upgrade schema and provider control' {
         $receipts = @(
             (New-TestObservationEvidence -RuntimeRoot $runtime -TaskId 'task-cost-success' -AsyncJobId 'async-job-0000000000000001' -ProviderId 'deepseek' -OutcomeState 'provider_succeeded' -Timestamp '2026-07-23T01:00:00Z' -CostCny 0.10 -InputTokens 100 -OutputTokens 20 -EventSuffix '0000000000000001' -ProjectId 'ai_content'),
             (New-TestObservationEvidence -RuntimeRoot $runtime -TaskId 'task-cost-failed' -AsyncJobId 'async-job-0000000000000002' -ProviderId 'deepseek' -OutcomeState 'provider_failed' -Timestamp '2026-07-23T02:00:00Z' -CostCny 0.20 -InputTokens 200 -OutputTokens 0 -EventSuffix '0000000000000002' -ProjectId 'ai_content'),
-            (New-TestObservationEvidence -RuntimeRoot $runtime -TaskId 'task-cost-unknown' -AsyncJobId 'async-job-0000000000000003' -ProviderId 'dashscope-wan27' -OutcomeState 'outcome_unknown' -Timestamp '2026-07-23T03:00:00Z' -CostCny 0.733924 -InputTokens 0 -OutputTokens 0 -EventSuffix '0000000000000003' -ProjectId 'ai_content')
+            (New-TestObservationEvidence -RuntimeRoot $runtime -TaskId 'task-cost-unknown' -AsyncJobId 'async-job-0000000000000003' -ProviderId 'provider-b' -OutcomeState 'outcome_unknown' -Timestamp '2026-07-23T03:00:00Z' -CostCny 0.733924 -InputTokens 0 -OutputTokens 0 -EventSuffix '0000000000000003' -ProjectId 'ai_content')
         )
         foreach ($receipt in $receipts) { $null = Invoke-HermesObservationWriter -Action AppendObservation -RuntimeRoot $runtime -Observation $receipt }
         $rebuilt = Invoke-HermesObservationWriter -Action RebuildCostProjection -RuntimeRoot $runtime -ProjectionDateUtc '2026-07-23'
@@ -383,7 +383,7 @@ Describe 'Hermes adapter upgrade schema and provider control' {
         $matrix.third_party_success_is_hermes_completion | Should -Be $false
         $matrix.projects.Count | Should -Be 4
         (@($matrix.projects.id) -join ',') | Should -Be 'novel_workbench,ai_content,content_audit,data_collection'
-        (@($matrix.projects.name) -join ',') | Should -Be '小说,AI剪辑,内容审计,数据收集'
+        (@($matrix.projects.name) -join ',') | Should -Be '小说,AI内容创作,内容审计,数据收集'
         foreach ($project in @($matrix.projects)) {
             $project.min_schema_version | Should -Be '0.1'
             $project.max_schema_version | Should -Be '0.2'
