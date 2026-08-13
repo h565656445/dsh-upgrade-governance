@@ -1,0 +1,88 @@
+{
+  "schema_identity": {
+    "schema_id": "hermes.upgrade_checklist",
+    "version": "0.2",
+    "sha256": "87E719922927C0322119D424146CE1FEEAAD60ED1C2AA7B3B51E3749B33271CD"
+  },
+  "checklist_id": "UPGATE-v1",
+  "path_authorities": {
+    "project_registry_path": "E:\\Projects\\10-知识库\\00-系统\\项目注册表.md",
+    "runtime_root": "runtime",
+    "adapter_allowlist": "adapters/projects/adapter-matrix.v0.2.json",
+    "contract_snapshot_rule": "contract_bound_runtime_snapshot_only"
+  },
+  "gates": [
+    {
+      "gate_id": "G1",
+      "name": "凭据暴露检查",
+      "check_type": "credential_exposure",
+      "pass_criteria": "变更和运行日志均不含凭据值",
+      "fail_action": "block",
+      "overridable": false,
+      "authorities": []
+    },
+    {
+      "gate_id": "G2",
+      "name": "路径授权检查",
+      "check_type": "authority_path",
+      "pass_criteria": "路径属于项目注册表、显式 RuntimeRoot、Adapter allowlist 或合同快照授权",
+      "fail_action": "block",
+      "overridable": false,
+      "authorities": ["project_registry", "runtime_root", "adapter_allowlist", "contract_snapshot"]
+    },
+    {
+      "gate_id": "G3",
+      "name": "红线能力检查",
+      "check_type": "redline_capability",
+      "pass_criteria": "未引入发布、付款、删除、账号变更或正式规则写入",
+      "fail_action": "block",
+      "overridable": false,
+      "authorities": []
+    },
+    {
+      "gate_id": "G4",
+      "name": "Schema 向后兼容",
+      "check_type": "schema_compatibility",
+      "pass_criteria": "四项目矩阵与 Schema Registry 闭包均可验证",
+      "fail_action": "block",
+      "overridable": false,
+      "authorities": ["adapter_allowlist"]
+    },
+    {
+      "gate_id": "G5",
+      "name": "SHA256 一致性",
+      "check_type": "artifact_hash",
+      "pass_criteria": "Schema Registry 与 Provider Worker 两个活动哈希锚全部匹配",
+      "fail_action": "block",
+      "overridable": false,
+      "authorities": ["adapter_allowlist"]
+    },
+    {
+      "gate_id": "G6",
+      "name": "人工审核门保留",
+      "check_type": "human_review_gate",
+      "pass_criteria": "人工批准和事实复核门未被绕过",
+      "fail_action": "block",
+      "overridable": false,
+      "authorities": []
+    },
+    {
+      "gate_id": "G7",
+      "name": "异步回调信任边界",
+      "check_type": "callback_trust",
+      "pass_criteria": "不可信回调仅记安全拒绝且不改变状态",
+      "fail_action": "block",
+      "overridable": false,
+      "authorities": ["contract_snapshot"]
+    },
+    {
+      "gate_id": "G8",
+      "name": "Hermes 完成权保留",
+      "check_type": "completion_authority",
+      "pass_criteria": "third_party_success_is_hermes_completion 保持 false",
+      "fail_action": "block",
+      "overridable": false,
+      "authorities": []
+    }
+  ]
+}

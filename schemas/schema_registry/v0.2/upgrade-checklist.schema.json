@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.hermes-harness/schemas/hermes.upgrade_checklist/0.2",
+  "title": "Hermes upgrade gate checklist 0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_identity", "checklist_id", "path_authorities", "gates"],
+  "properties": {
+    "schema_identity": { "$ref": "#/$defs/schema_identity" },
+    "checklist_id": { "const": "UPGATE-v1" },
+    "path_authorities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_registry_path", "runtime_root", "adapter_allowlist", "contract_snapshot_rule"],
+      "properties": {
+        "project_registry_path": { "type": "string", "minLength": 3 },
+        "runtime_root": { "type": "string", "minLength": 3 },
+        "adapter_allowlist": { "const": "adapters/projects/adapter-matrix.v0.2.json" },
+        "contract_snapshot_rule": { "const": "contract_bound_runtime_snapshot_only" }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate_id", "name", "check_type", "pass_criteria", "fail_action", "overridable", "authorities"],
+        "properties": {
+          "gate_id": { "pattern": "^G[1-8]$" },
+          "name": { "type": "string", "minLength": 1 },
+          "check_type": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
+          "pass_criteria": { "type": "string", "minLength": 3 },
+          "fail_action": { "const": "block" },
+          "overridable": { "type": "boolean" },
+          "authorities": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "enum": ["project_registry", "runtime_root", "adapter_allowlist", "contract_snapshot"] }
+          }
+        },
+        "oneOf": [
+          { "properties": { "gate_id": { "const": "G1" }, "check_type": { "const": "credential_exposure" }, "overridable": { "const": false } }, "required": ["gate_id", "check_type", "overridable"] },
+          { "properties": { "gate_id": { "const": "G2" }, "check_type": { "const": "authority_path" }, "overridable": { "const": false } }, "required": ["gate_id", "check_type", "overridable"] },
+          { "properties": { "gate_id": { "const": "G3" }, "check_type": { "const": "redline_capability" }, "overridable": { "const": false } }, "required": ["gate_id", "check_type", "overridable"] },
+          { "properties": { "gate_id": { "const": "G4" }, "check_type": { "const": "schema_compatibility" }, "overridable": { "const": false } }, "required": ["gate_id", "check_type", "overridable"] },
+          { "properties": { "gate_id": { "const": "G5" }, "check_type": { "const": "artifact_hash" }, "overridable": { "const": false } }, "required": ["gate_id", "check_type", "overridable"] },
+          { "properties": { "gate_id": { "const": "G6" }, "check_type": { "const": "human_review_gate" }, "overridable": { "const": false } }, "required": ["gate_id", "check_type", "overridable"] },
+          { "properties": { "gate_id": { "const": "G7" }, "check_type": { "const": "callback_trust" }, "overridable": { "const": false } }, "required": ["gate_id", "check_type", "overridable"] },
+          { "properties": { "gate_id": { "const": "G8" }, "check_type": { "const": "completion_authority" }, "overridable": { "const": false } }, "required": ["gate_id", "check_type", "overridable"] }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[A-F0-9]{64}$" },
+    "schema_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_id", "version", "sha256"],
+      "properties": {
+        "schema_id": { "const": "hermes.upgrade_checklist" },
+        "version": { "const": "0.2" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}
